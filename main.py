@@ -27,7 +27,7 @@ def get_content(site, selector):
     return content
 
 
-def main(diff, site=None, selector=None, frequency=None, ntfy_channel=None):
+def main(diff, site=None, selector=None, frequency=None, ntfy_channel=None, webhook_url=None):
     content = None
     succesive_errors = 0
 
@@ -40,8 +40,10 @@ def main(diff, site=None, selector=None, frequency=None, ntfy_channel=None):
             if succesive_errors >= 3:
                 payload = f"[TERMINATING!] {payload}"
 
-            httpx.post(f"https://ntfy.sh/{ntfy_channel}",
-                       data=payload)
+            if webhook_url:
+                httpx.post(webhook_url, data=payload)
+            elif ntfy_channel:
+                httpx.post(f"https://ntfy.sh/{ntfy_channel}", data=payload)
 
             if succesive_errors >= 3:
                 raise e
@@ -57,7 +59,10 @@ def main(diff, site=None, selector=None, frequency=None, ntfy_channel=None):
                 else:
                   payload = f"Site ({site}) change from '{content[0]}' to '{next_content[0]}'"
 
-                httpx.post(f"https://ntfy.sh/{ntfy_channel}", data=payload)
+                if webhook_url:
+                    httpx.post(webhook_url, data=payload)
+                elif ntfy_channel:
+                    httpx.post(f"https://ntfy.sh/{ntfy_channel}", data=payload)
 
         content = next_content
         succesive_errors = 0
@@ -77,6 +82,8 @@ if __name__ == "__main__":
                         help="amount of seconds to wait until next retry")
     parser.add_argument("-c", "--ntfy-channel", type=str,
                         help="the channel topic to use for ntfy.sh")
+    parser.add_argument("-w", "--webhook-url", type=str,
+                        help="the webhook URL to use for notifications")
 
     args = vars(parser.parse_args())
 
